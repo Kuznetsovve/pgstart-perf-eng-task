@@ -40,3 +40,77 @@ postgres-# \dti+
  public | t2  | таблица | postgres |         | постоянное | heap          | 249 MB |
 (2 строки)
 ```
+
+---
+
+## II. Решение:
+
+### 1. Задача 1
+
+Ускорить простой запроc, добиться времени выполнения < 10ms
+
+**Исходный запрос:**
+
+``` sql
+select name from t1 where id = 50000;
+```
+Получим план этого запроса:
+
+``` sql
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT name FROM t1 WHERE id = 50000;
+```
+
+Вывод:
+
+```sql
+                    QUERY PLAN
+ Seq Scan on t1  (cost=0.00..208379.92 rows=1 width=30) (actual time=13.877..2941.615 rows=1 loops=1)
+   Filter: (id = 50000)
+   Rows Removed by Filter: 9999999
+   Buffers: shared hit=2112 read=81280
+ Planning:
+   Buffers: shared hit=5 dirtied=1
+ Planning Time: 8.826 ms
+ Execution Time: 2943.684 ms
+(8 строк)
+```
+
+Происходит последовательный перебор значений до нужного, из-за чего время выполнения запроса составляет почти 3 секунды. Выходит так из-за расположения необходимого значения в конце таблицы (наихудший вариант по скорости выполнения; сложность алгоритма — O(n))
+
+**Оптимизация:**
+
+Заметим, что таблица t1 создавалась с помощью генератора числовых последовательностей. Соответственно, можно проиндексировать записи, перезагрузить конфигурацию и сделать повторный запрос:
+
+```sql
+CREATE INDEX idx_t1_id ON t1(id);
+SELECT pg_reload_conf();
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT name FROM t1 WHERE id = 50000;
+```
+
+Вывод:
+
+```sql
+                    QUERY PLAN
+Index Scan using idx_t1_id on t1  (cost=0.43..3.45 rows=1 width=30) (actual time=0.524..0.528 rows=1 loops=1)
+   Index Cond: (id = 50000)
+   Buffers: shared read=4
+ Planning:
+   Buffers: shared hit=18 read=1
+ Planning Time: 4.532 ms
+ Execution Time: 0.982 ms
+(7 строк)
+```
+Как видно, время выполнения запроса меньше 10 мс при индексном поиске (сложность алгоритмя — O(log(n)))
+
+### 2. Задача 2
+
+### 3. Задача 3
+
+### 4. Задача 4
+
+### 5. Задача 5
+
+```sql
+```
