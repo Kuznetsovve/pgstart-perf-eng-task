@@ -41,6 +41,24 @@ postgres-# \dti+
 (2 строки)
 ```
 
+```mermaid
+---
+title: ER-диаграмма
+---
+erDiagram
+    t1 ||--o{ t2 : "t_id → id"
+    t1 {
+        int id PK
+        int parent_id
+        text name
+    }
+    t2 {
+        int id PK
+        int t_id FK
+        text day
+    }
+```
+
 ---
 
 ## II. Решение:
